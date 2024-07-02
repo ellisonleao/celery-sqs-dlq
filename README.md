@@ -10,7 +10,13 @@ This project shows how to use a django project with Celery using SQS as broker w
 
 ## Calling task
 
-1. Run worker
+1. Run localstack
+
+```bash
+$ docker compose up -d
+```
+
+1. Run worker in another terminal
 
 ```bash
 $ celery -A celery_sqs_dlq worker -Q test-queue.fifo
