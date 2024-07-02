@@ -9,25 +9,28 @@ def dlq_task(**kwargs):
     exceptions = kwargs.get("exceptions", ())
 
     def wraps(f):
-        class SendToDLQTask(Task):
-            max_retries = retry_kwargs.get("max_retries", 3)
-            default_retry_delay = retry_kwargs.get("countdown", 3)
-            acks_late = True
-            reject_on_worker_lost = True
+        def zas(self, *args , **kwargs):
+            try:
+                print("self", self)
+                return f(*args , **kwargs)
+            except exceptions as exc:
+                print("expected exceptions", exc)
+                print("retries", self.request.retries)
+                print("self.max_retries", self.max_retries)
 
-            def on_retry(self, exc, task_id, args, kwargs, einfo):
-                print(f"RETRY #{self.request.retries}")
-                print(f"MAX RETRIES = {self.max_retries}")
-                return super().on_retry(exc, task_id, args, kwargs, einfo)
+                if self.request.retries >= self.max_retries:
+                    print("rejecting due to max retries", exc)
+                    raise Reject(str(exc), requeue=True)
+                raise exc
+            except Exception as exc:
+                print("rejecting unexpected exception", exc)
+                raise Reject(str(exc), requeue=False)
 
-            def on_failure(self, exc, task_id, args, kwargs, einfo):
-                print(f"CALLED ON FAILURE WITH EXC={exc}. Rejecting task")
-                exc = Reject(exc, requeue=False)
-                return super().on_failure(exc, task_id, args, kwargs, einfo)
-
-        return app.task(base=SendToDLQTask, autoretry_for=exceptions)(f)
+        return app.task(retry_kwargs=retry_kwargs, autoretry_for=exceptions, bind=True)(zas)
 
     return wraps
+
+
 
 
 @dlq_task(exceptions=(ZeroDivisionError,), retry_kwargs={"countdown": 1})
