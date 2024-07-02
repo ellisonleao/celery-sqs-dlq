@@ -1,0 +1,14 @@
+services:
+  localstack:
+    image: localstack/localstack
+    ports:
+      - 4566:4566
+    environment:
+      - DEBUG=1
+      - SERVICES=sqs
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - ./bin/init-localstack.sh:/etc/localstack/init/ready.d/init-localstack.sh
+
+volumes:
+  localstack_data:
