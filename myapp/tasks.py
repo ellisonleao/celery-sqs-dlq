@@ -1,4 +1,3 @@
-from celery import Task
 from celery.exceptions import Reject
 
 from celery_sqs_dlq.celery import app
@@ -9,28 +8,21 @@ def dlq_task(**kwargs):
     exceptions = kwargs.get("exceptions", ())
 
     def wraps(f):
-        def zas(self, *args , **kwargs):
+        def wrapped_task(self, *args, **kwargs):
             try:
-                print("self", self)
-                return f(*args , **kwargs)
+                return f(*args, **kwargs)
             except exceptions as exc:
-                print("expected exceptions", exc)
-                print("retries", self.request.retries)
-                print("self.max_retries", self.max_retries)
-
                 if self.request.retries >= self.max_retries:
-                    print("rejecting due to max retries", exc)
                     raise Reject(str(exc), requeue=True)
                 raise exc
             except Exception as exc:
-                print("rejecting unexpected exception", exc)
                 raise Reject(str(exc), requeue=False)
 
-        return app.task(retry_kwargs=retry_kwargs, autoretry_for=exceptions, bind=True)(zas)
+        return app.task(retry_kwargs=retry_kwargs, autoretry_for=exceptions, bind=True)(
+            wrapped_task
+        )
 
     return wraps
-
-
 
 
 @dlq_task(exceptions=(ZeroDivisionError,), retry_kwargs={"countdown": 1})
