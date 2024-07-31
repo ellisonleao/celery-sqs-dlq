@@ -35,11 +35,3 @@ def should_retry():
 def should_not_retry():
     print("will raise unhandled exception, should not retry")
     raise Exception("unhandled exception")
-
-
-@app.task(acks_late=True)
-def send_to_dlq_task():
-    try:
-        return 1 / 0
-    except Exception as exc:
-        raise Reject(str(exc), requeue=False)
