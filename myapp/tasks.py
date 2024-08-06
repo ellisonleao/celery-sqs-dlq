@@ -13,7 +13,7 @@ def dlq_task(**kwargs):
                 return f(*args, **kwargs)
             except exceptions as exc:
                 if self.request.retries >= self.max_retries:
-                    raise Reject(str(exc), requeue=True)
+                    raise Reject(str(exc), requeue=False)
                 raise exc
             except Exception as exc:
                 raise Reject(str(exc), requeue=False)
